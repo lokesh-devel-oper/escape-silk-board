@@ -86,6 +86,8 @@ backend/app/
   store.py            sessions, locks, idempotency
   world.py            locations, actions, routes, seeded events
 frontend/
+  Dockerfile          Vite build and Nginx runtime image
+  nginx.conf          SPA serving and same-origin API proxy
   e2e/                live browser gameplay specifications
   scripts/            isolated E2E service runner
   src/api/            typed API client
@@ -96,6 +98,8 @@ tests/                backend engine, API, AI, and safety tests
 .env.example          backend environment template
 netlify.toml          frontend build and SPA routing
 render.yaml           backend service Blueprint
+compose.yaml          complete Dockerized application stack
+backend/Dockerfile    non-root uv/FastAPI runtime image
 pyproject.toml        Python metadata and runtime/dev dependency groups
 uv.lock               reproducible Python dependency lockfile
 DESIGN.md             concise product decisions
@@ -136,6 +140,8 @@ npm.cmd install
 | `GEMINI_MIN_CONFIDENCE` | Backend | `0.55` | Intent proposals below this use fallback |
 | `VITE_DEV_API_TARGET` | Vite development server | `http://127.0.0.1:8000` | Backend target for the same-origin local proxy |
 | `VITE_API_BASE_URL` | Frontend production build | unset | Public backend origin, without a trailing slash |
+| `APP_PORT` | Docker Compose | `18080` | Host port for the complete containerized application |
+| `DOCKER_ALLOWED_ORIGINS` | Docker backend | Local port 18080 origins | Exact direct-access origins inside the Docker deployment |
 
 FastAPI itself does not automatically read `.env`; the local Uvicorn command below loads it explicitly. A shell, IDE, or hosting dashboard can supply the same values. The example files are safe templates and contain no secret.
 
@@ -166,6 +172,28 @@ npm.cmd run dev
 ```
 
 Open `http://127.0.0.1:5173`. In development, the browser calls same-origin `/api` paths and Vite proxies them to `VITE_DEV_API_TARGET`, avoiding browser CORS entirely. The default API is at `http://127.0.0.1:8000`, with documentation at `/docs` and health at `/health`.
+
+### Dockerized full stack
+
+Docker Compose builds two production images. Nginx serves the compiled React application and proxies `/api`, `/health`, `/docs`, and `/openapi.json` to the private FastAPI container. The backend uses the committed uv lockfile, excludes development packages, and runs as a non-root user.
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build -d
+docker compose ps
+```
+
+Open `http://localhost:18080`; API documentation is available through the same origin at `http://localhost:18080/docs`. Change `APP_PORT` and the matching `DOCKER_ALLOWED_ORIGINS` entries in `.env` if that port is occupied.
+
+Useful lifecycle commands:
+
+```powershell
+docker compose logs -f
+docker compose down
+docker compose build --no-cache
+```
+
+Set `GEMINI_API_KEY` and `GEMINI_MODEL` in the uncommitted root `.env` to enable Gemini inside the backend container. Leaving both blank retains deterministic mode. Session data remains in process memory and is lost when the backend container is recreated.
 
 ## 13. API endpoints
 
