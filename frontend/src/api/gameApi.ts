@@ -2,7 +2,11 @@ import type { ActionResult, GameContext, GameState, WorldDefinition } from "../t
 
 // Local development uses Vite's same-origin proxy. Production supplies the
 // public backend origin at build time through VITE_API_BASE_URL.
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+// When the app is hosted under a prefix (for example /gameplay/), BASE_URL
+// keeps same-origin API requests inside that prefix instead of escaping to /.
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || import.meta.env.BASE_URL || ""
+).replace(/\/$/, "");
 
 class ApiError extends Error {
   constructor(

@@ -140,6 +140,7 @@ npm.cmd install
 | `GEMINI_MIN_CONFIDENCE` | Backend | `0.55` | Intent proposals below this use fallback |
 | `VITE_DEV_API_TARGET` | Vite development server | `http://127.0.0.1:8000` | Backend target for the same-origin local proxy |
 | `VITE_API_BASE_URL` | Frontend production build | unset | Public backend origin, without a trailing slash |
+| `VITE_BASE_PATH` | Frontend build | `/` locally, `/gameplay/` in Docker | Public URL prefix used by assets and same-origin API calls |
 | `APP_PORT` | Docker Compose | `18080` | Host port for the complete containerized application |
 | `DOCKER_ALLOWED_ORIGINS` | Docker backend | Local port 18080 origins | Exact direct-access origins inside the Docker deployment |
 
@@ -183,7 +184,7 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Open `http://localhost:18080`; API documentation is available through the same origin at `http://localhost:18080/docs`. Change `APP_PORT` and the matching `DOCKER_ALLOWED_ORIGINS` entries in `.env` if that port is occupied.
+Open `http://localhost:18080/gameplay/`; API documentation is available through the same prefix at `http://localhost:18080/gameplay/docs`. The Docker image builds Vite with `VITE_BASE_PATH=/gameplay/`, and Nginx strips that prefix before serving assets or proxying FastAPI. Change `APP_PORT` and the matching `DOCKER_ALLOWED_ORIGINS` entries in `.env` if that port is occupied.
 
 Useful lifecycle commands:
 
@@ -267,6 +268,7 @@ The last local verification produced 90 passing backend tests, 4 passing compone
 1. Push the repository to a Git provider and create a Netlify site from it.
 2. Netlify reads root `netlify.toml`, sets `frontend` as the base, runs `npm run build`, and publishes `frontend/dist`.
 3. In Netlify environment variables, set `VITE_API_BASE_URL` to the deployed Render origin, for example `https://your-api.onrender.com`.
+   Keep `VITE_BASE_PATH=/` when Netlify serves this application at the domain root.
 4. Deploy again after changing a `VITE_` value because it is embedded at build time.
 5. Copy the final Netlify origin into Render's `ALLOWED_ORIGINS` and redeploy the backend.
 6. Open the site, start a game, make a move, reload, and finish one route. Check browser network requests and mobile layout.
